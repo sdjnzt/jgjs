@@ -139,7 +139,7 @@ const AppLayout: React.FC = () => {
         }}
       >
         <div className="logo">
-          {collapsed ? '秸秆监控' : '邹城市秸秆禁烧视频监控平台'}
+          {collapsed ? '秸秆监控' : '秸秆禁烧视频监控平台'}
         </div>
         <Menu
           theme="dark"
@@ -179,7 +179,7 @@ const AppLayout: React.FC = () => {
               }}
             />
             <div style={{ fontSize: '18px', fontWeight: 'bold' }}>
-              邹城市农业农村局秸秆禁烧视频监控平台
+              秸秆禁烧视频监控平台
             </div>
           </div>
           
