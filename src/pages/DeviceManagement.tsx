@@ -925,7 +925,7 @@ const DeviceManagement: React.FC = () => {
             <Card title="维护历史" style={{ marginBottom: '16px' }}>
               <Timeline>
                 <Timeline.Item color="green">
-                  <div>2025-07-15</div>
+                  <div>2025-07-22</div>
                   <div>例行检查 - 设备运行正常</div>
                 </Timeline.Item>
                 <Timeline.Item color="blue">

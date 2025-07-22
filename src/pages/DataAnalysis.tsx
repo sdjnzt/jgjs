@@ -16,7 +16,7 @@ import {
   Avatar,
   Typography
 } from 'antd';
-// Note: recharts is not installed, using simple div-based charts instead
+import ReactECharts from 'echarts-for-react';
 import { 
   FireOutlined,
   AlertOutlined,
@@ -41,9 +41,18 @@ const DataAnalysis: React.FC = () => {
   const [timeRange, setTimeRange] = useState<string>('7d');
   const [dateRange, setDateRange] = useState<[string, string]>(['', '']);
   const [selectedArea, setSelectedArea] = useState<string>('all');
+  const [chartsReady, setChartsReady] = useState(false);
+
+  // 延迟渲染图表
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setChartsReady(true);
+    }, 800);
+    return () => clearTimeout(timer);
+  }, []);
   
-  // 模拟实时数据
-  const [realTimeData, setRealTimeData] = useState([
+  // 实时监控数据
+  const realTimeData = [
     { time: '00:00', alerts: 2, smoke: 1, flame: 0 },
     { time: '02:00', alerts: 1, smoke: 0, flame: 1 },
     { time: '04:00', alerts: 3, smoke: 2, flame: 1 },
@@ -56,7 +65,7 @@ const DataAnalysis: React.FC = () => {
     { time: '18:00', alerts: 6, smoke: 3, flame: 2 },
     { time: '20:00', alerts: 4, smoke: 2, flame: 1 },
     { time: '22:00', alerts: 2, smoke: 1, flame: 0 }
-  ]);
+  ];
 
   // 告警类型分布数据
   const alertTypeData = [
@@ -65,21 +74,6 @@ const DataAnalysis: React.FC = () => {
     { name: '人员告警', value: 15, color: '#faad14' },
     { name: '车辆告警', value: 8, color: '#52c41a' },
     { name: '机械告警', value: 2, color: '#1890ff' }
-  ];
-
-  // 区域风险等级数据
-  const areaRiskData = areas.map(area => ({
-    name: area.name,
-    riskLevel: area.riskLevel,
-    deviceCount: Math.floor(Math.random() * 10) + 1,
-    alertCount: Math.floor(Math.random() * 20) + 1
-  }));
-
-  // 设备状态分布
-  const deviceStatusData = [
-    { name: '在线', value: 85, color: '#52c41a' },
-    { name: '离线', value: 10, color: '#ff4d4f' },
-    { name: '故障', value: 5, color: '#faad14' }
   ];
 
   // 月度趋势数据
@@ -97,6 +91,364 @@ const DataAnalysis: React.FC = () => {
     { month: '11月', alerts: 380, smoke: 280, flame: 140 },
     { month: '12月', alerts: 420, smoke: 320, flame: 160 }
   ];
+
+  // 设备状态分布
+  const deviceStatusData = [
+    { name: '在线', value: 85, color: '#52c41a' },
+    { name: '离线', value: 10, color: '#ff4d4f' },
+    { name: '故障', value: 5, color: '#faad14' }
+  ];
+
+  // 区域风险等级数据
+  const areaRiskData = areas.map(area => ({
+    name: area.name,
+    riskLevel: area.riskLevel,
+    deviceCount: area.deviceCount || Math.floor(Math.random() * 10) + 1,
+    alertCount: Math.floor(Math.random() * 20) + 1
+  }));
+
+  // 实时监控折线图配置
+  const getLineChartOption = () => ({
+    title: {
+      text: '24小时告警趋势',
+      left: 'center',
+      textStyle: {
+        fontSize: 16,
+        color: '#666'
+      }
+    },
+    tooltip: {
+      trigger: 'axis',
+      backgroundColor: 'rgba(0,0,0,0.8)',
+      textStyle: {
+        color: '#fff'
+      }
+    },
+    legend: {
+      data: ['告警数', '烟雾检测', '火焰检测'],
+      bottom: 10
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '15%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: realTimeData.map(item => item.time),
+      axisLabel: {
+        color: '#666'
+      }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        color: '#666'
+      }
+    },
+    series: [
+      {
+        name: '告警数',
+        type: 'line',
+        data: realTimeData.map(item => item.alerts),
+        smooth: true,
+        lineStyle: {
+          color: '#ff4d4f',
+          width: 3
+        },
+        itemStyle: {
+          color: '#ff4d4f'
+        },
+        areaStyle: {
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: 'rgba(255,77,79,0.3)' },
+              { offset: 1, color: 'rgba(255,77,79,0.1)' }
+            ]
+          }
+        }
+      },
+      {
+        name: '烟雾检测',
+        type: 'line',
+        data: realTimeData.map(item => item.smoke),
+        smooth: true,
+        lineStyle: {
+          color: '#ff7875',
+          width: 2
+        },
+        itemStyle: {
+          color: '#ff7875'
+        }
+      },
+      {
+        name: '火焰检测',
+        type: 'line',
+        data: realTimeData.map(item => item.flame),
+        smooth: true,
+        lineStyle: {
+          color: '#fa8c16',
+          width: 2
+        },
+        itemStyle: {
+          color: '#fa8c16'
+        }
+      }
+    ]
+  });
+
+  // 告警类型饼图配置
+  const getPieChartOption = () => ({
+    title: {
+      text: '告警类型分布',
+      left: 'center',
+      textStyle: {
+        fontSize: 16,
+        color: '#666'
+      }
+    },
+    tooltip: {
+      trigger: 'item',
+      formatter: '{a} <br/>{b}: {c}% ({d}%)',
+      backgroundColor: 'rgba(0,0,0,0.8)',
+      textStyle: {
+        color: '#fff'
+      }
+    },
+    legend: {
+      bottom: 10,
+      left: 'center'
+    },
+    series: [
+      {
+        name: '告警类型',
+        type: 'pie',
+        radius: ['40%', '70%'],
+        center: ['50%', '45%'],
+        data: alertTypeData,
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        },
+        label: {
+          show: true,
+          formatter: '{b}: {c}%'
+        },
+        labelLine: {
+          show: true
+        }
+      }
+    ]
+  });
+
+  // 月度趋势柱状图配置
+  const getColumnChartOption = () => ({
+    title: {
+      text: '月度数据趋势',
+      left: 'center',
+      textStyle: {
+        fontSize: 16,
+        color: '#666'
+      }
+    },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      },
+      backgroundColor: 'rgba(0,0,0,0.8)',
+      textStyle: {
+        color: '#fff'
+      }
+    },
+    legend: {
+      data: ['告警数', '烟雾检测', '火焰检测'],
+      bottom: 10
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '15%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: monthlyTrendData.map(item => item.month),
+      axisLabel: {
+        color: '#666'
+      }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        color: '#666'
+      }
+    },
+    series: [
+      {
+        name: '告警数',
+        type: 'bar',
+        data: monthlyTrendData.map(item => item.alerts),
+        itemStyle: {
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: '#ff4d4f' },
+              { offset: 1, color: '#ff7875' }
+            ]
+          }
+        }
+      },
+      {
+        name: '烟雾检测',
+        type: 'bar',
+        data: monthlyTrendData.map(item => item.smoke),
+        itemStyle: {
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: '#ff7875' },
+              { offset: 1, color: '#ffa39e' }
+            ]
+          }
+        }
+      },
+      {
+        name: '火焰检测',
+        type: 'bar',
+        data: monthlyTrendData.map(item => item.flame),
+        itemStyle: {
+          color: {
+            type: 'linear',
+            x: 0, y: 0, x2: 0, y2: 1,
+            colorStops: [
+              { offset: 0, color: '#fa8c16' },
+              { offset: 1, color: '#ffc53d' }
+            ]
+          }
+        }
+      }
+    ]
+  });
+
+  // 区域风险分布图配置
+  const getAreaRiskChartOption = () => ({
+    title: {
+      text: '区域风险分布',
+      left: 'center',
+      textStyle: {
+        fontSize: 16,
+        color: '#666'
+      }
+    },
+    tooltip: {
+      trigger: 'axis',
+      axisPointer: {
+        type: 'shadow'
+      },
+      backgroundColor: 'rgba(0,0,0,0.8)',
+      textStyle: {
+        color: '#fff'
+      }
+    },
+    legend: {
+      data: ['告警次数', '设备数量'],
+      bottom: 10
+    },
+    grid: {
+      left: '3%',
+      right: '4%',
+      bottom: '20%',
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: areaRiskData.map(item => item.name.length > 6 ? item.name.substring(0, 6) + '...' : item.name),
+      axisLabel: {
+        color: '#666',
+        interval: 0,
+        rotate: 30
+      }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        color: '#666'
+      }
+    },
+    series: [
+      {
+        name: '告警次数',
+        type: 'bar',
+        data: areaRiskData.map(item => item.alertCount),
+        itemStyle: {
+          color: '#ff4d4f'
+        }
+      },
+      {
+        name: '设备数量',
+        type: 'bar',
+        data: areaRiskData.map(item => item.deviceCount),
+        itemStyle: {
+          color: '#1890ff'
+        }
+      }
+    ]
+  });
+
+  // 设备状态饼图配置
+  const getDeviceStatusOption = () => ({
+    title: {
+      text: '设备状态分布',
+      left: 'center',
+      textStyle: {
+        fontSize: 16,
+        color: '#666'
+      }
+    },
+    tooltip: {
+      trigger: 'item',
+      formatter: '{a} <br/>{b}: {c}% ({d}%)',
+      backgroundColor: 'rgba(0,0,0,0.8)',
+      textStyle: {
+        color: '#fff'
+      }
+    },
+    legend: {
+      bottom: 10,
+      left: 'center'
+    },
+    series: [
+      {
+        name: '设备状态',
+        type: 'pie',
+        radius: ['30%', '60%'],
+        center: ['50%', '45%'],
+        data: deviceStatusData,
+        emphasis: {
+          itemStyle: {
+            shadowBlur: 10,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(0, 0, 0, 0.5)'
+          }
+        },
+        label: {
+          show: true,
+          formatter: '{b}: {c}%'
+        }
+      }
+    ]
+  });
+
+
 
   // 统计数据
   const totalAlerts = alerts.length;
@@ -184,7 +536,7 @@ const DataAnalysis: React.FC = () => {
     {
       title: '告警率',
       key: 'alertRate',
-            render: (_: any, record: any) => (
+      render: (_: any, record: any) => (
         <Progress 
           percent={Math.round((record.alertCount / (record.deviceCount * 10)) * 100)} 
           size="small" 
@@ -290,204 +642,79 @@ const DataAnalysis: React.FC = () => {
       {/* 图表区域 */}
       <Tabs defaultActiveKey="1">
         <TabPane tab="实时监控" key="1">
-            <Row gutter={16}>
+          <Row gutter={16}>
             <Col span={16}>
               <Card title="告警趋势" style={{ marginBottom: '16px' }}>
-                <div style={{ height: 300, padding: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', height: '200px' }}>
-                    {realTimeData.map((item, index) => (
-                      <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', height: '100%' }}>
-                          <div style={{ 
-                            height: `${(item.alerts / 15) * 100}%`, 
-                            width: '20px', 
-                            backgroundColor: '#ff4d4f', 
-                            margin: '2px',
-                            borderRadius: '2px'
-                          }} />
-                          <div style={{ 
-                            height: `${(item.smoke / 8) * 100}%`, 
-                            width: '20px', 
-                            backgroundColor: '#ff7875', 
-                            margin: '2px',
-                            borderRadius: '2px'
-                          }} />
-                          <div style={{ 
-                            height: `${(item.flame / 5) * 100}%`, 
-                            width: '20px', 
-                            backgroundColor: '#fa8c16', 
-                            margin: '2px',
-                            borderRadius: '2px'
-                          }} />
-                        </div>
-                        <div style={{ fontSize: '12px', marginTop: '8px' }}>{item.time}</div>
+                <div style={{ height: 350 }}>
+                  {chartsReady ? (
+                    <ReactECharts option={getLineChartOption()} />
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                      加载中...
                     </div>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', marginRight: '20px' }}>
-                      <div style={{ width: '12px', height: '12px', backgroundColor: '#ff4d4f', marginRight: '8px' }}></div>
-                      <span>告警数</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', marginRight: '20px' }}>
-                      <div style={{ width: '12px', height: '12px', backgroundColor: '#ff7875', marginRight: '8px' }}></div>
-                      <span>烟雾检测</span>
-                  </div>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <div style={{ width: '12px', height: '12px', backgroundColor: '#fa8c16', marginRight: '8px' }}></div>
-                      <span>火焰检测</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </Card>
             </Col>
             <Col span={8}>
               <Card title="告警类型分布" style={{ marginBottom: '16px' }}>
-                <div style={{ height: 300, padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '20px' }}>
-                    {alertTypeData.map((item, index) => (
-                      <div key={index} style={{ textAlign: 'center' }}>
-                        <div style={{ 
-                          width: '80px', 
-                          height: '80px', 
-                          borderRadius: '50%', 
-                          backgroundColor: item.color,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          marginBottom: '8px'
-                        }}>
-                          {item.value}%
-                        </div>
-                        <div style={{ fontSize: '12px' }}>{item.name}</div>
-                          </div>
-                    ))}
-                  </div>
-                  </div>
-                </Card>
-              </Col>
-            </Row>
-          </TabPane>
+                <div style={{ height: 350 }}>
+                  {chartsReady ? (
+                    <ReactECharts option={getPieChartOption()} />
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                      加载中...
+                    </div>
+                  )}
+                </div>
+              </Card>
+            </Col>
+          </Row>
+        </TabPane>
 
         <TabPane tab="趋势分析" key="2">
-            <Row gutter={16}>
+          <Row gutter={16}>
             <Col span={24}>
               <Card title="月度趋势分析" style={{ marginBottom: '16px' }}>
-                <div style={{ height: 400, padding: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', height: '300px' }}>
-                    {monthlyTrendData.map((item, index) => (
-                      <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                        <div style={{ 
-                          height: `${(item.alerts / 420) * 100}%`, 
-                          width: '100%', 
-                          backgroundColor: '#ff4d4f',
-                          borderRadius: '2px',
-                          marginBottom: '2px'
-                        }} />
-                        <div style={{ 
-                          height: `${(item.smoke / 320) * 100}%`, 
-                          width: '100%', 
-                          backgroundColor: '#ff7875',
-                          borderRadius: '2px',
-                          marginBottom: '2px'
-                        }} />
-                        <div style={{ 
-                          height: `${(item.flame / 160) * 100}%`, 
-                          width: '100%', 
-                          backgroundColor: '#fa8c16',
-                          borderRadius: '2px'
-                        }} />
-                        <div style={{ fontSize: '12px', marginTop: '8px', transform: 'rotate(-45deg)' }}>{item.month}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', marginRight: '20px' }}>
-                      <div style={{ width: '12px', height: '12px', backgroundColor: '#ff4d4f', marginRight: '8px' }}></div>
-                      <span>告警数</span>
+                <div style={{ height: 400 }}>
+                  {chartsReady ? (
+                    <ReactECharts option={getColumnChartOption()} />
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                      加载中...
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', marginRight: '20px' }}>
-                      <div style={{ width: '12px', height: '12px', backgroundColor: '#ff7875', marginRight: '8px' }}></div>
-                      <span>烟雾检测</span>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <div style={{ width: '12px', height: '12px', backgroundColor: '#fa8c16', marginRight: '8px' }}></div>
-                      <span>火焰检测</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
-                </Card>
-              </Col>
-            </Row>
-          </TabPane>
+              </Card>
+            </Col>
+          </Row>
+        </TabPane>
 
         <TabPane tab="区域分析" key="3">
           <Row gutter={16}>
             <Col span={12}>
               <Card title="区域风险分布" style={{ marginBottom: '16px' }}>
-                <div style={{ height: 300, padding: '20px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', height: '200px' }}>
-                    {areaRiskData.map((item, index) => (
-                      <div key={index} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-end', height: '100%', gap: '4px' }}>
-                          <div style={{ 
-                            height: `${(item.alertCount / 20) * 100}%`, 
-                            width: '20px', 
-                            backgroundColor: '#ff4d4f',
-                            borderRadius: '2px'
-                          }} />
-                          <div style={{ 
-                            height: `${(item.deviceCount / 10) * 100}%`, 
-                            width: '20px', 
-                            backgroundColor: '#1890ff',
-                            borderRadius: '2px'
-                          }} />
-                          </div>
-                        <div style={{ fontSize: '12px', marginTop: '8px', textAlign: 'center' }}>{item.name}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'center', marginTop: '20px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', marginRight: '20px' }}>
-                      <div style={{ width: '12px', height: '12px', backgroundColor: '#ff4d4f', marginRight: '8px' }}></div>
-                      <span>告警次数</span>
+                <div style={{ height: 350 }}>
+                  {chartsReady ? (
+                    <ReactECharts option={getAreaRiskChartOption()} />
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                      加载中...
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <div style={{ width: '12px', height: '12px', backgroundColor: '#1890ff', marginRight: '8px' }}></div>
-                      <span>设备数量</span>
-                    </div>
-                  </div>
+                  )}
                 </div>
               </Card>
             </Col>
             <Col span={12}>
               <Card title="设备状态分布" style={{ marginBottom: '16px' }}>
-                <div style={{ height: 300, padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '20px' }}>
-                    {deviceStatusData.map((item, index) => (
-                      <div key={index} style={{ textAlign: 'center' }}>
-                        <div style={{ 
-                          width: '80px', 
-                          height: '80px', 
-                          borderRadius: '50%', 
-                          backgroundColor: item.color,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          color: 'white',
-                          fontSize: '12px',
-                          fontWeight: 'bold',
-                          marginBottom: '8px'
-                        }}>
-                          {item.value}%
-                        </div>
-                        <div style={{ fontSize: '12px' }}>{item.name}</div>
-                      </div>
-                    ))}
-                  </div>
+                <div style={{ height: 350 }}>
+                  {chartsReady ? (
+                    <ReactECharts option={getDeviceStatusOption()} />
+                  ) : (
+                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
+                      加载中...
+                    </div>
+                  )}
                 </div>
               </Card>
             </Col>
@@ -503,7 +730,7 @@ const DataAnalysis: React.FC = () => {
         </TabPane>
 
         <TabPane tab="告警记录" key="4">
-            <Row gutter={16}>
+          <Row gutter={16}>
             <Col span={24}>
               <Card title="最新告警">
                 <List
@@ -530,19 +757,19 @@ const DataAnalysis: React.FC = () => {
                           </Space>
                         }
                       />
-                          <div>
+                      <div>
                         <Tag color={item.status === 'resolved' ? 'green' : item.status === 'processing' ? 'orange' : 'red'}>
                           {item.status === 'resolved' ? '已处理' : item.status === 'processing' ? '处理中' : '未处理'}
-                              </Tag>
-                            </div>
+                        </Tag>
+                      </div>
                     </List.Item>
                   )}
                 />
-                </Card>
-              </Col>
-            </Row>
-          </TabPane>
-        </Tabs>
+              </Card>
+            </Col>
+          </Row>
+        </TabPane>
+      </Tabs>
     </div>
   );
 };
