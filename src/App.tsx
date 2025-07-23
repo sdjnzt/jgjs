@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { HashRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { HashRouter as Router, Routes, Route, useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { Layout, Menu, theme, Button, Avatar, Dropdown, Space, Typography } from 'antd';
 import {
   DashboardOutlined,
@@ -18,11 +18,8 @@ import {
   BellOutlined,
   ClusterOutlined,
   MonitorOutlined,
-  SecurityScanOutlined,
-  GlobalOutlined,
-  FileTextOutlined,
-  FileSearchOutlined,
 } from '@ant-design/icons';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import VideoMonitor from './pages/VideoMonitor';
 import ImageRecognition from './pages/ImageRecognition';
@@ -35,6 +32,25 @@ import InspectionManagement from './pages/InspectionManagement';
 import SystemSettings from './pages/SystemSettings';
 
 const { Header, Sider, Content } = Layout;
+
+// 认证保护组件
+const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+
+  useEffect(() => {
+    if (!isLoggedIn && location.pathname !== '/login') {
+      navigate('/login', { replace: true });
+    }
+  }, [isLoggedIn, location, navigate]);
+
+  if (!isLoggedIn) {
+    return null;
+  }
+
+  return <>{children}</>;
+};
 
 const menuItems = [
   {
@@ -91,20 +107,17 @@ const menuItems = [
 
 const AppLayout: React.FC = () => {
   const [collapsed, setCollapsed] = useState(false);
-  const [notificationCount, setNotificationCount] = useState(3); // 模拟通知数量
+  const [notificationCount, setNotificationCount] = useState(3);
   const navigate = useNavigate();
   const location = useLocation();
   const {
-    token: { colorBgContainer, borderRadiusLG },
+    token: { colorBgContainer },
   } = theme.useToken();
 
-  // 处理通知点击
   const handleNotificationClick = () => {
     console.log('查看系统通知');
-    // 这里可以添加通知面板的逻辑
   };
 
-  // 处理管理员菜单点击
   const handleAdminMenuClick = ({ key }: { key: string }) => {
     switch (key) {
       case 'profile':
@@ -114,13 +127,16 @@ const AppLayout: React.FC = () => {
         console.log('打开账户设置');
         break;
       case 'logout':
-        console.log('用户退出登录');
-        // 这里可以添加退出登录的逻辑
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('userInfo');
+        navigate('/login');
         break;
       default:
         break;
     }
   };
+
+  const userInfo = JSON.parse(localStorage.getItem('userInfo') || '{}');
 
   return (
     <Layout style={{ minHeight: '100vh' }}>
@@ -183,9 +199,7 @@ const AppLayout: React.FC = () => {
             </div>
           </div>
           
-          {/* 管理员组件 */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            {/* 通知图标 */}
             <Button
               type="text"
               icon={<BellOutlined />}
@@ -212,7 +226,6 @@ const AppLayout: React.FC = () => {
               )}
             </Button>
             
-            {/* 管理员下拉菜单 */}
             <Dropdown
               menu={{
                 items: [
@@ -248,7 +261,7 @@ const AppLayout: React.FC = () => {
                 />
                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
                   <Typography.Text strong style={{ fontSize: '14px', lineHeight: 1 }}>
-                    系统管理员
+                    {userInfo.username || '系统管理员'}
                   </Typography.Text>
                 </div>
               </Space>
@@ -285,7 +298,17 @@ const AppLayout: React.FC = () => {
 const App: React.FC = () => {
   return (
     <Router>
-      <AppLayout />
+      <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route
+          path="/*"
+          element={
+            <AuthGuard>
+              <AppLayout />
+            </AuthGuard>
+          }
+        />
+      </Routes>
     </Router>
   );
 };
