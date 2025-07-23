@@ -40,7 +40,11 @@ const AuthGuard: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
 
   useEffect(() => {
-    if (!isLoggedIn && location.pathname !== '/login') {
+    if (!isLoggedIn) {
+      // 保存尝试访问的路径，登录后可以重定向回来
+      if (location.pathname !== '/login') {
+        localStorage.setItem('redirectPath', location.pathname);
+      }
       navigate('/login', { replace: true });
     }
   }, [isLoggedIn, location, navigate]);
@@ -114,6 +118,14 @@ const AppLayout: React.FC = () => {
     token: { colorBgContainer },
   } = theme.useToken();
 
+  // 检查登录状态
+  useEffect(() => {
+    const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+    if (!isLoggedIn && location.pathname !== '/login') {
+      navigate('/login', { replace: true });
+    }
+  }, [location, navigate]);
+
   const handleNotificationClick = () => {
     console.log('查看系统通知');
   };
@@ -127,9 +139,11 @@ const AppLayout: React.FC = () => {
         console.log('打开账户设置');
         break;
       case 'logout':
+        // 清除所有登录相关的状态
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('userInfo');
-        navigate('/login');
+        localStorage.removeItem('redirectPath');
+        navigate('/login', { replace: true });
         break;
       default:
         break;
@@ -299,7 +313,14 @@ const App: React.FC = () => {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={<Login />} />
+        <Route 
+          path="/login" 
+          element={
+            <PublicRoute>
+              <Login />
+            </PublicRoute>
+          } 
+        />
         <Route
           path="/*"
           element={
@@ -311,6 +332,27 @@ const App: React.FC = () => {
       </Routes>
     </Router>
   );
+};
+
+// 公共路由组件（用于登录页等不需要认证的页面）
+const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
+  const isLoggedIn = localStorage.getItem('isLoggedIn') === 'true';
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      // 如果已登录，检查是否有保存的重定向路径
+      const redirectPath = localStorage.getItem('redirectPath') || '/';
+      localStorage.removeItem('redirectPath'); // 使用后清除
+      navigate(redirectPath, { replace: true });
+    }
+  }, [isLoggedIn, navigate]);
+
+  if (isLoggedIn) {
+    return null;
+  }
+
+  return <>{children}</>;
 };
 
 export default App; 
