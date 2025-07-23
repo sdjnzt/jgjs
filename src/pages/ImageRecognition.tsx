@@ -38,6 +38,7 @@ import {
   TrophyOutlined
 } from '@ant-design/icons';
 import { recognitionResults, monitorDevices } from '../data/mockData';
+import burnImage from '../assets/33.png';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -411,7 +412,7 @@ const ImageRecognition: React.FC = () => {
         open={showDetail}
         onCancel={() => setShowDetail(false)}
         footer={null}
-        width={600}
+        width={800}
       >
         {selectedResult && (() => {
           const result = recognitionResults.find(r => r.id === selectedResult);
@@ -420,23 +421,51 @@ const ImageRecognition: React.FC = () => {
           return (
             <div>
               <Row gutter={16}>
-                <Col span={12}>
+                <Col span={14}>
                   <div style={{ 
-                    background: '#f5f5f5', 
-                    height: '200px', 
                     borderRadius: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    border: '1px solid #d9d9d9'
+                    overflow: 'hidden',
+                    border: '1px solid #d9d9d9',
+                    position: 'relative',
+                    paddingTop: '56.25%' // 16:9 宽高比
                   }}>
-                    <div style={{ textAlign: 'center' }}>
-                      <CameraOutlined style={{ fontSize: '48px', color: '#d9d9d9', marginBottom: '16px' }} />
-                      <div style={{ color: '#666' }}>识别图像预览</div>
-                    </div>
+                    <img
+                      src={burnImage}
+                      alt="识别图像"
+                      style={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                      }}
+                    />
+                    {result.type === 'burning' && (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          top: 10,
+                          right: 10,
+                          background: 'rgba(255, 77, 79, 0.9)',
+                          color: 'white',
+                          padding: '4px 8px',
+                          borderRadius: '4px',
+                          fontSize: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px'
+                        }}
+                      >
+                        <FireOutlined /> 火点检测
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ marginTop: '8px', fontSize: '12px', color: '#666', textAlign: 'center' }}>
+                    {result.type === 'burning' ? '检测到秸秆焚烧行为' : '检测到异常情况'}
                   </div>
                 </Col>
-                <Col span={12}>
+                <Col span={10}>
                   <Descriptions column={1} size="small">
                     <Descriptions.Item label="设备名称">{result.deviceName}</Descriptions.Item>
                     <Descriptions.Item label="识别类型">
@@ -452,11 +481,18 @@ const ImageRecognition: React.FC = () => {
                           status={result.confidence >= 80 ? 'success' : result.confidence >= 60 ? 'normal' : 'exception'}
                           showInfo={false}
                           strokeColor={getConfidenceColor(result.confidence)}
+                          style={{ width: 100 }}
                         />
                         <Text>{result.confidence}%</Text>
                       </Space>
                     </Descriptions.Item>
                     <Descriptions.Item label="识别时间">{new Date(result.timestamp).toLocaleString()}</Descriptions.Item>
+                    <Descriptions.Item label="地理位置">
+                      <Space>
+                        <EnvironmentOutlined />
+                        <Text>邹城市某区域</Text>
+                      </Space>
+                    </Descriptions.Item>
                   </Descriptions>
                 </Col>
               </Row>
@@ -494,6 +530,21 @@ const ImageRecognition: React.FC = () => {
                   </Card>
                 </Col>
               </Row>
+
+              <div style={{ marginTop: '16px' }}>
+                <Alert
+                  message="系统分析"
+                  description={
+                    <div>
+                      <p>• 检测到明显的火焰特征，疑似秸秆焚烧行为</p>
+                      <p>• 火焰面积约 2-3 平方米，处于初始阶段</p>
+                      <p>• 建议立即派遣巡查人员前往现场处理</p>
+                    </div>
+                  }
+                  type="warning"
+                  showIcon
+                />
+              </div>
             </div>
           );
         })()}
